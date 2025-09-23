@@ -13,7 +13,7 @@ with st.expander("Dados do Dataset"):
     st.dataframe(df.head(4))
 
 # Sidebar para filtros
-st.sidebar.header("🔍 Filtros de Análise")
+st.sidebar.header(":material/search: Filtros de Análise")
 
 # Obter valores únicos para filtros
 categorias_disponiveis = ['Todas'] + sorted(df['main_category'].unique().tolist())
@@ -41,14 +41,14 @@ if marca_selecionada != 'Todas':
 
 # Mostrar informações dos filtros aplicados
 if categoria_selecionada != 'Todas' or marca_selecionada != 'Todas':
-    st.info(f"📊 Filtros aplicados: Categoria: {categoria_selecionada} | Marca: {marca_selecionada}")
-    st.info(f"📈 Total de produtos após filtros: {len(df_filtrado):,}")
+    st.info(f":material/bar_chart: Filtros aplicados: Categoria: {categoria_selecionada} | Marca: {marca_selecionada}")
+    st.info(f":material/trending_up: Total de produtos após filtros: {len(df_filtrado):,}")
 
 # Layout em colunas para o botão e estatísticas
 col1, col2, col3 = st.columns([2, 1, 1])
 
 with col2:
-    if st.button("🔄 Analisar Preços", type="primary", use_container_width=True):
+    if st.button(":material/refresh: Analisar Preços", type="primary", use_container_width=True):
         # Carregar o modelo
         with open('logistic_regression_model.pkl', 'rb') as file:
             model = pickle.load(file)
@@ -72,7 +72,7 @@ with col2:
         st.session_state.analise_feita = True
 
 with col3:
-    if st.button("🔄 Limpar Análise", type="secondary", use_container_width=True):
+    if st.button(":material/clear: Limpar Análise", type="secondary", use_container_width=True):
         if 'df_resultado' in st.session_state:
             del st.session_state.df_resultado
         if 'analise_feita' in st.session_state:
@@ -103,7 +103,8 @@ if 'analise_feita' in st.session_state and st.session_state.analise_feita:
     st.divider()
     
     # Análise por categoria - Gráfico de colunas
-    st.subheader("📊 Produtos fora do Padrão por Categoria")
+    st.markdown("**História de Negócio:** Como gerente de portfólio, eu quero entender quais categorias concentram mais produtos fora do padrão para priorizar ajustes de preço.")
+    st.subheader(":material/bar_chart: Produtos fora do Padrão por Categoria")
     
     analise_categoria = df_resultado.groupby(['main_category', 'status_preco']).size().unstack(fill_value=0)
     
@@ -125,7 +126,8 @@ if 'analise_feita' in st.session_state and st.session_state.analise_feita:
         st.plotly_chart(fig_categoria, use_container_width=True)
         
         # Tabela de análise detalhada por categoria
-        st.subheader("🔍 Análise Detalhada por Categoria")
+        st.markdown("**História de Negócio:** Como analista de pricing, eu quero comparar estatísticas detalhadas de preços por categoria para identificar padrões e variações.")
+        st.subheader(":material/search: Análise Detalhada por Categoria")
         analise_detalhada = df_resultado.groupby('main_category').agg({
             'classificacao': ['count', 'sum'],
             'price': ['mean', 'median', 'std']
@@ -140,7 +142,8 @@ if 'analise_feita' in st.session_state and st.session_state.analise_feita:
     
     # Análise por marca (se não filtrada)
     if marca_selecionada == 'Todas':
-        st.subheader("🏷️ Produtos fora do Padrão por Marca")
+        st.markdown("**História de Negócio:** Como gerente comercial, eu quero identificar as marcas com maior incidência de preços fora do padrão para alinhar estratégias com fornecedores.")
+        st.subheader(":material/label: Produtos fora do Padrão por Marca")
         
         analise_marca = df_resultado.groupby(['brand', 'status_preco']).size().unstack(fill_value=0)
         
@@ -163,7 +166,8 @@ if 'analise_feita' in st.session_state and st.session_state.analise_feita:
             st.plotly_chart(fig_marca, use_container_width=True)
     
     # Gráfico de pizza original (distribuição geral)
-    st.subheader("📈 Distribuição Geral dos Preços")
+    st.markdown("**História de Negócio:** Como diretor de pricing, eu quero ter uma visão geral da proporção de produtos normais e fora do padrão para avaliar riscos no portfólio.")
+    st.subheader(":material/trending_up: Distribuição Geral dos Preços")
     counts = df_resultado['status_preco'].value_counts()
     
     fig_pizza = px.pie(
@@ -178,10 +182,11 @@ if 'analise_feita' in st.session_state and st.session_state.analise_feita:
     st.plotly_chart(fig_pizza, use_container_width=True)
     
     # Download dos dados analisados
-    st.subheader("💾 Download dos Resultados")
+    st.markdown("**História de Negócio:** Como analista de dados, eu quero exportar os resultados para compartilhar com outras áreas e aprofundar a análise offline.")
+    st.subheader(":material/download: Download dos Resultados")
     csv = df_resultado.to_csv(index=False)
     st.download_button(
-        label="📥 Baixar Dados Analisados (CSV)",
+        label=":material/file_download: Baixar Dados Analisados (CSV)",
         data=csv,
         file_name=f"analise_precos_{categoria_selecionada}_{marca_selecionada}.csv",
         mime="text/csv"
@@ -189,10 +194,10 @@ if 'analise_feita' in st.session_state and st.session_state.analise_feita:
 
 else:
     # Mostrar informações iniciais
-    st.info("👆 Clique em 'Analisar Preços' para gerar a análise dos produtos fora do padrão.")
+    st.info(":material/touch_app: Clique em 'Analisar Preços' para gerar a análise dos produtos fora do padrão.")
     
     # Estatísticas básicas do dataset
-    st.subheader("📋 Informações do Dataset")
+    st.subheader(":material/info: Informações do Dataset")
     col_info1, col_info2, col_info3 = st.columns(3)
     
     with col_info1:
