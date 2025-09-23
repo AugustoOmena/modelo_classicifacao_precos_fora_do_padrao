@@ -6,7 +6,7 @@ from sklearn.cluster import KMeans
 # ===============================
 # 1. Carregar Dataset
 # ===============================
-df = pd.read_csv("pages\customer_clusters.csv")
+df = pd.read_csv("pages/customer_clusters.csv")
 
 st.set_page_config(
     page_title="Análise de Clientes",
