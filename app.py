@@ -4,8 +4,44 @@ import pickle
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Carregar o arquivo X_test.csv
-df = pd.read_csv('X_test_brand_mcategory.csv')
+with st.sidebar.expander(":material/upload: Upload de CSV", expanded=False):
+    uploaded_file = st.file_uploader("Escolha um arquivo CSV", type="csv")
+
+    st.markdown("""
+    **Critérios para o CSV funcionar no modelo:**
+    - Deve conter as colunas:
+      - `price` (numérica)
+      - `price_ratio_cat` (numérica)
+      - `main_category` (texto)
+      - `brand` (texto)
+    - Os valores não podem estar vazios nessas colunas.
+    - O arquivo deve estar no formato **CSV** com separador padrão (`,`).
+    """)
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.success(f":material/check_circle: Arquivo **{uploaded_file.name}** carregado com sucesso!")
+
+    # ===============================
+    # Validação do Dataset
+    # ===============================
+    colunas_necessarias = ['price', 'price_ratio_cat', 'main_category', 'brand']
+    colunas_faltando = [col for col in colunas_necessarias if col not in df.columns]
+
+    if colunas_faltando:
+        st.error(f":material/error: O arquivo enviado não possui as colunas necessárias: {', '.join(colunas_faltando)}")
+        st.stop()
+    else:
+        st.success(":material/check_circle: Dataset válido! Todas as colunas obrigatórias estão presentes.")
+
+else:
+    df = pd.read_csv('X_test_brand_mcategory.csv')
+    st.info(":material/info: Nenhum arquivo enviado. Usando dataset padrão **X_test_brand_mcategory.csv**.")
+
+
+
+
+
 
 st.markdown('<h1 style="color:#1a73e8;">Modelo 1 - Classificação - Preços fora do Padrão</h1>', unsafe_allow_html=True)
 
@@ -48,28 +84,31 @@ if categoria_selecionada != 'Todas' or marca_selecionada != 'Todas':
 col1, col2, col3 = st.columns([2, 1, 1])
 
 with col2:
-    if st.button(":material/refresh: Analisar Preços", type="primary", use_container_width=True):
-        # Carregar o modelo
-        with open('logistic_regression_model.pkl', 'rb') as file:
-            model = pickle.load(file)
-        
-        # Selecionar apenas as colunas que o modelo foi treinado
-        df_model = df_filtrado[['price', 'price_ratio_cat']]
-        
-        # Aplicar o modelo aos dados filtrados
-        predictions = model.predict(df_model)
-        
-        # Adicionar predições ao DataFrame filtrado
-        df_resultado = df_filtrado.copy()
-        df_resultado['classificacao'] = predictions
-        df_resultado['status_preco'] = df_resultado['classificacao'].map({
-            0: 'Preço Normal',
-            1: 'Preço fora do Padrão'
-        })
-        
-        # Armazenar resultado no session_state
-        st.session_state.df_resultado = df_resultado
-        st.session_state.analise_feita = True
+    if len(df_filtrado) == 0:
+        st.button(":material/refresh: Analisar Preços", type="primary", use_container_width=True, disabled=True)
+    else:
+        if st.button(":material/refresh: Analisar Preços", type="primary", use_container_width=True):
+            # Carregar o modelo
+            with open('logistic_regression_model.pkl', 'rb') as file:
+                model = pickle.load(file)
+            
+            # Selecionar apenas as colunas que o modelo foi treinado
+            df_model = df_filtrado[['price', 'price_ratio_cat']]
+            
+            # Aplicar o modelo aos dados filtrados
+            predictions = model.predict(df_model)
+            
+            # Adicionar predições ao DataFrame filtrado
+            df_resultado = df_filtrado.copy()
+            df_resultado['classificacao'] = predictions
+            df_resultado['status_preco'] = df_resultado['classificacao'].map({
+                0: 'Preço Normal',
+                1: 'Preço fora do Padrão'
+            })
+            
+            # Armazenar resultado no session_state
+            st.session_state.df_resultado = df_resultado
+            st.session_state.analise_feita = True
 
 with col3:
     if st.button(":material/clear: Limpar Análise", type="secondary", use_container_width=True):
@@ -98,7 +137,11 @@ if 'analise_feita' in st.session_state and st.session_state.analise_feita:
         st.metric("% fora do Padrão", f"{percentual_fora_padrao:.1f}%")
     with met4:
         preco_medio_fora = df_resultado[df_resultado['classificacao'] == 1]['price'].mean()
-        st.metric("Preço Médio (fora padrão)", f"R$ {preco_medio_fora:.2f}" if not pd.isna(preco_medio_fora) else "N/A")
+        if not pd.isna(preco_medio_fora):
+            preco_formatado = f"R$ {preco_medio_fora:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            st.metric("Preço Médio (fora padrão)", preco_formatado)
+        else:
+            st.metric("Preço Médio (fora padrão)", "R$ 0,00")
     
     st.divider()
     
