@@ -3,10 +3,45 @@ import pandas as pd
 import plotly.express as px
 from sklearn.cluster import KMeans
 
+
+
 # ===============================
-# 1. Carregar Dataset
+# Upload CSV em Acordeon
 # ===============================
-df = pd.read_csv("pages/customer_clusters.csv")
+with st.sidebar.expander(":material/upload: Upload de CSV", expanded=False):
+    uploaded_file = st.file_uploader("Escolha um arquivo CSV", type="csv")
+
+    st.markdown("""
+    **Critérios para o CSV funcionar:**
+    - Deve conter as colunas:
+      - `user_id` (identificador único do cliente)
+      - `total_spent` (numérica)
+      - `frequency` (numérica)
+      - `recency_days` (numérica)
+    - Os valores não podem estar vazios nessas colunas.
+    - Arquivo no formato **CSV** com separador padrão `,`.
+    """)
+
+# ===============================
+# Carregar dataset
+# ===============================
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    
+    # Validação do dataset
+    colunas_necessarias = ["user_id", "total_spent", "frequency", "recency_days"]
+    colunas_faltando = [col for col in colunas_necessarias if col not in df.columns]
+    if colunas_faltando:
+        st.error(f":material/error: O arquivo enviado não possui as colunas necessárias: {', '.join(colunas_faltando)}")
+        st.stop()
+    else:
+        st.success(":material/check_circle: Dataset válido! Todas as colunas obrigatórias estão presentes.")
+else:
+    df = pd.read_csv("pages/customer_clusters.csv")
+    st.info(":material/info: Nenhum arquivo enviado. Usando dataset padrão **customer_clusters.csv**.")
+
+
+
 
 st.set_page_config(
     page_title="Análise de Clientes",
@@ -16,7 +51,7 @@ st.set_page_config(
 
 st.markdown('<h1 style="color:#1a73e8;">Análise de Clientes - Clusterização</h1>', unsafe_allow_html=True)
 
-with st.expander("📊 Dados do Dataset"):
+with st.expander("Dados do Dataset"):
     st.dataframe(df.head(5))
 
 # ===============================
