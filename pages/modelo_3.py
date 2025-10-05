@@ -143,16 +143,13 @@ if 'analise_feita' in st.session_state and st.session_state.analise_feita:
 
     
     # Exibir métricas
-    met1, met2, met3, met4 = st.columns(4)
+    met1, met2, met3 = st.columns(3)
     with met1:
         st.metric("Total de Produtos", formatar_numero(total_produtos))
     with met2:
         st.metric("Produtos fora do Padrão", formatar_numero(produtos_fora_padrao))
     with met3:
         st.metric("% fora do Padrão", formatar_percentual(percentual_fora_padrao))
-    with met4:
-        preco_medio_fora = df_resultado[df_resultado['classificacao'] == 1]['price'].mean()
-        st.metric("Preço Médio (fora padrão)", formatar_moeda(preco_medio_fora))
     
     st.divider()
     
