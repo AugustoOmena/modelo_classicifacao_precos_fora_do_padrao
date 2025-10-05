@@ -1,37 +1,39 @@
-# 📊 Tech Challenge 03 - Análise de Preços com Streamlit
+# Tech Challenge 3 (Fase 3): Aplicação Streamlit (Dashboard)
 
-Uma aplicação web interativa desenvolvida em Streamlit para análise e classificação de preços de produtos utilizando técnicas de Machine Learning.
+Este projeto apresenta um Dashboard interativo desenvolvido em **Streamlit** para visualização e interação com os modelos de Machine Learning construídos no contexto do Tech Challenge 3 da FIAP PosTech.
 
-## 🎯 Sobre o Projeto
+### Acesse a Aplicação
 
-Este sistema foi desenvolvido para identificar **produtos com preços fora do padrão** e realizar análises preditivas sobre comportamento de compra, oferecendo insights valiosos para decisões de pricing e estratégias comerciais.
+Você pode acessar a aplicação Streamlit diretamente através do seguinte link público:
 
-## 🚀 Funcionalidades
+[https://tech-challenge-3-grupo64.streamlit.app/](https://tech-challenge-3-grupo64.streamlit.app/)
 
-### 📈 Modelo 1 - Classificação de Preços Anômalos
+## Funcionalidades
 
-- Identifica produtos com preços fora do padrão
-- Análise detalhada por categoria e marca
-- Visualizações interativas com gráficos
-- Métricas de performance em tempo real
-- Export de resultados em CSV
 
-### 🎯 Modelo 2 - Previsão de Probabilidade de Compra
+
+### Modelo 1 - Análise de Clientes
+
+- Clusterização de clientes por comportamento
+- Segmentação automática de perfis
+- Análise de padrões de consumo
+- Identificação de grupos similares
+
+### Modelo 2 - Previsão de Probabilidade de Compra
 
 - Predição de conversão de vendas
 - Análise de sessões de clientes
-- Identificação de potenciais compradores
-- Insights por marca, categoria e dia da semana
-- Dashboard com métricas consolidadas
+- Insights por marca, categoria e período
+- Dashboard com métricas de conversão
 
-### 🔍 Modelo 3 - Classificação K-Means
+### Modelo 3 - Preços fora do Padrão
 
-- Clustering de produtos por características de preço
-- Segmentação automática
-- Análise comparativa entre grupos
-- Identificação de padrões de pricing
+- Classificação de produtos com preços anômalos
+- Análise por categoria e marca
+- Identificação automática de outliers
+- Visualizações interativas de pricing
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 - **Python 3.11** - Linguagem de programação
 - **Streamlit** - Framework para interface web
@@ -40,12 +42,12 @@ Este sistema foi desenvolvido para identificar **produtos com preços fora do pa
 - **Scikit-learn** - Algoritmos de Machine Learning
 - **Joblib** - Serialização de modelos
 
-## 📋 Pré-requisitos
+## Pré-requisitos
 
 - Python 3.11 ou superior
 - pip (gerenciador de pacotes Python)
 
-## ⚡ Instalação e Execução
+## Instalação e Execução
 
 1. **Clone o repositório:**
 
@@ -71,44 +73,53 @@ Este sistema foi desenvolvido para identificar **produtos com preços fora do pa
    http://localhost:8501
    ```
 
-## 📊 Formato dos Dados
+## Formato dos Dados
 
-### Para Modelo 1 e 3:
+### Para Modelo 1:
 
 ```csv
-price,price_ratio_cat,main_category,brand
-199.99,1.2,Electronics,Samsung
-89.50,0.8,Clothing,Nike
+["user_id", "total_spent", "frequency", "recency_days"]
 ```
 
 ### Para Modelo 2:
-
+- Deve conter as **colunas já codificadas (numéricas)**.
+  
 ```csv
-price,brand_encoded,main_category_encoded,sub_category_encoded,hour,weekday_encoded,add_to_cart_count,views_count
-238.55,2653,5,119,0,2,0,98
-150.00,10,5,120,14,5,2,15
+["price", "brand_encoded", "main_category_encoded", "sub_category_encoded", "hour", "weekday_encoded", "add_to_cart_count", "views_count"]
 ```
 
-## 📁 Estrutura do Projeto
+### Para Modelo 3:
+
+```csv
+['price', 'price_ratio_cat', 'main_category', 'brand']
+```
+
+## Estrutura do Projeto
 
 ```
 streamlitapp/
-├── app.py                 # Página principal
+├── app.py                # Página inicial
 ├── utils.py              # Funções utilitárias
 ├── requirements.txt      # Dependências
+├── .streamlit/
+│   └── config.toml
 ├── pages/
-│   ├── modelo_2.py      # Modelo de previsão de compra
-│   └── modelo_3.py      # Modelo de clustering
+│   ├── modelo_1.py      # Modelo 1 - Análise de Clientes
+│   ├── modelo_2.py      # Modelo 2 - Previsão de Probabilidade de Compra
+│   └── modelo_3.py      # Modelo 3 - Preços fora do Padrão
 ├── models/
+│   ├── modelo_kmeans.pkl
+│   ├── modelo_reglog.pkl
 │   └── modelo_randomforest.pkl
 ├── encoders/
 │   ├── le_brand.pkl
 │   ├── le_main_category.pkl
 │   └── le_weekday.pkl
+├── .gitgnore
 └── README.md
 ```
 
-## 🎮 Como Usar
+## Como Usar
 
 1. **Navegue** pelo menu lateral para escolher o modelo desejado
 2. **Faça upload** do seu arquivo CSV ou use os dados de exemplo
@@ -117,52 +128,18 @@ streamlitapp/
 5. **Visualize** os resultados através de gráficos e métricas
 6. **Exporte** os dados analisados em formato CSV
 
-## 📈 Exemplos de Uso
+## ✒️ Autores
 
-### Análise de Preços Anômalos
+| Nome                            |   RM    | Link do GitHub                                      |
+|---------------------------------|---------|-----------------------------------------------------|
+| Ana Paula de Almeida            | 363602  | [GitHub](https://github.com/Ana9873P)               |
+| Augusto do Nascimento Omena     | 363185  | [GitHub](https://github.com/AugustoOmena)           |
+| Bruno Gabriel de Oliveira       | 361248  | [GitHub](https://github.com/brunogabrieldeoliveira) |
+| José Walmir Gonçalves Duque     | 363196  | [GitHub](https://github.com/WALMIRDUQUE)            |
+| Pedro Henrique da Costa Ulisses | 360864  | [GitHub](https://github.com/ordepzero)              |
 
-- Identifique produtos com preços muito acima ou abaixo da média
-- Analise padrões por categoria de produto
-- Compare performance entre marcas
 
-### Previsão de Conversão
+## 📄 Licença
 
-- Preveja quais sessões têm maior probabilidade de conversão
-- Otimize campanhas de marketing
-- Identifique os melhores dias para promoções
-
-### Segmentação de Produtos
-
-- Agrupe produtos com características similares
-- Identifique oportunidades de pricing
-- Analise distribuição de preços por cluster
-
-## 🔧 Solução de Problemas
-
-### Erro de carregamento de modelo
-
-Se encontrar erros relacionados ao scikit-learn:
-
-```bash
-pip install scikit-learn
-```
-
-### Problemas com dependências
-
-Reinstale todas as dependências:
-
-```bash
-pip install -r requirements.txt --upgrade
-```
-
-## 📝 Licença
-
-Este projeto foi desenvolvido para fins educacionais como parte do Tech Challenge 03.
-
-## 👥 Contribuição
-
-Projeto desenvolvido pela equipe do Tech Challenge 03 da FIAP.
-
----
-
-**💡 Dica:** Para melhor experiência, use navegadores modernos e mantenha a janela em tela cheia para visualizar todos os gráficos adequadamente.
+Este projeto está licenciado sob a Licença MIT.  
+Consulte o arquivo [license](docs/license/license.txt)  para mais detalhes.
