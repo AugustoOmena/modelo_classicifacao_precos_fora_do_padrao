@@ -179,18 +179,31 @@ with col4:
 st.markdown("#### :material/calendar_today: Dias da Semana Mais Propensos à Conversão")
 st.markdown("**História de Negócio:** Como gerente de vendas, quero saber quais dias da semana são mais propensos a resultar em uma compra para otimizar o agendamento de campanhas de marketing, promoções e a escala da equipe de atendimento.")
 
-dias_conversao = df_conversao['weekday'].value_counts().reset_index()
+# Análise completa por dia da semana (conversão e não conversão)
+analise_dias = df_processed.groupby(['weekday', 'classificacao']).size().unstack(fill_value=0)
 ordem_dias = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-dias_conversao['weekday'] = pd.Categorical(dias_conversao['weekday'], categories=ordem_dias, ordered=True)
-dias_conversao = dias_conversao.sort_values('weekday')
 
+# Garantir que todos os dias da semana estejam presentes
+analise_dias = analise_dias.reindex(ordem_dias, fill_value=0)
+
+# Calcular percentuais
+analise_dias_pct = analise_dias.div(analise_dias.sum(axis=1), axis=0) * 100
+
+# Criar gráfico de barras empilhadas com percentuais
 fig_dias = px.bar(
-    dias_conversao,
+    analise_dias_pct.reset_index(),
     x='weekday',
-    y='count',
-    title='Sessões com Potencial de Conversão por Dia da Semana',
-    labels={'count': 'Nº de Sessões', 'weekday': 'Dia da Semana'},
-    text='count'
+    y=['Baixo Potencial', 'Potencial Conversão'],
+    title='Distribuição de Conversão por Dia da Semana (%)',
+    labels={'value': 'Percentual (%)', 'weekday': 'Dia da Semana', 'variable': 'Classificação'},
+    color_discrete_map={
+        'Baixo Potencial': '#ff7f7f',
+        'Potencial Conversão': '#90ee90'
+    }
+)
+fig_dias.update_layout(
+    yaxis=dict(range=[0, 100]),
+    barmode='stack'
 )
 st.plotly_chart(fig_dias, use_container_width=True)
 
