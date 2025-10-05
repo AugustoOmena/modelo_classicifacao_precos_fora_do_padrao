@@ -1,266 +1,205 @@
 import streamlit as st
 import pandas as pd
-import pickle
 import plotly.express as px
-import plotly.graph_objects as go
+import joblib
 import sys
 import os
 
-# Adicionar o diretório pai ao path para importar utils
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from utils import formatar_moeda, formatar_numero, formatar_percentual
+from utils import  formatar_inteiro
 
-with st.sidebar.expander(":material/upload: Upload de CSV", expanded=False):
-    uploaded_file = st.file_uploader("Escolha um arquivo CSV", type="csv")
+# ===============================
+# Configuração da Página
+# ===============================
+st.set_page_config(
+    page_title="Análise de Conversão de Vendas",
+    page_icon=":material/target:",
+    layout="wide"
+)
 
-    st.markdown("""
-    **Critérios para o CSV funcionar no modelo:**
-    - Deve conter as colunas:
-      - `price` (numérica)
-      - `price_ratio_cat` (numérica)
-      - `main_category` (texto)
-      - `brand` (texto)
-    - Os valores não podem estar vazios nessas colunas.
-    - O arquivo deve estar no formato **CSV** com separador padrão (`,`).
-    """)
+# ===============================
+# Carregamento do Modelo e Encoders
+# ===============================
+@st.cache_resource
+def load_assets(model_path, encoder_paths):
+    """Carrega o modelo de classificação e os encoders a partir de arquivos .pkl"""
+    assets = {}
+    try:
+        assets['model'] = joblib.load(model_path)
+        for name, path in encoder_paths.items():
+            assets[name] = joblib.load(path)
+        return assets
+    except FileNotFoundError as e:
+        st.error(f":material/error: Arquivo não encontrado: {e.filename}. Por favor, adicione o arquivo na pasta do projeto e atualize a página.")
+        st.stop()
 
+ENCODER_PATHS = {
+    "le_main_category": "./encoders/le_main_category.pkl",
+    "le_brand": "./encoders/le_brand.pkl",
+    "le_weekday": "./encoders/le_weekday.pkl"
+}
+assets = load_assets("./models/modelo_randomforest.pkl", ENCODER_PATHS)
+classification_model = assets['model']
+
+# ===============================
+# Sidebar e Upload de Arquivo
+# ===============================
+with st.sidebar:
+    with st.expander(":material/upload: Upload de CSV", expanded=False):
+        uploaded_file = st.file_uploader("Escolha um arquivo CSV", type="csv")
+
+        st.markdown("""
+        **Critérios para o CSV:**
+        - Deve conter as **colunas já codificadas (numéricas)**.
+        - Ex: `price`, `brand_encoded`, `main_category_encoded`, `sub_category_encoded`, `hour`, `weekday_encoded`, `add_to_cart_count`, `views_count`.
+        """)
+
+# ===============================
+# Carregamento dos Dados
+# ===============================
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-    st.success(f":material/check_circle: Arquivo **{uploaded_file.name}** carregado com sucesso!")
-
-    # ===============================
-    # Validação do Dataset
-    # ===============================
-    colunas_necessarias = ['price', 'price_ratio_cat', 'main_category', 'brand']
-    colunas_faltando = [col for col in colunas_necessarias if col not in df.columns]
-
-    if colunas_faltando:
-        st.error(f":material/error: O arquivo enviado não possui as colunas necessárias: {', '.join(colunas_faltando)}")
-        st.stop()
-    else:
-        st.success(":material/check_circle: Dataset válido! Todas as colunas obrigatórias estão presentes.")
-
 else:
-    df = pd.read_csv('X_test_brand_mcategory.csv')
-    st.info(":material/info: Nenhum arquivo enviado. Usando dataset padrão **X_test_brand_mcategory.csv**.")
+    # Carregando dados de exemplo de um arquivo CSV
+    try:
+        df = pd.read_csv("./datasets/randomforest_test.csv")
+        st.info(":material/info: Nenhum arquivo enviado. Usando dados de exemplo do arquivo df_tratado_streamlit.csv.")
+    except FileNotFoundError:
+        st.error(":material/error: Arquivo de exemplo não encontrado. Por favor, faça upload de um arquivo CSV.")
+        st.stop()
+
+# ===============================
+# Título e Amostra dos Dados
+# ===============================
+st.markdown('<h1 style="color:#1a73e8;">Modelo 2 - Previsão de Probabilidade de Compra</h1>', unsafe_allow_html=True)
+with st.expander("Visualizar Amostra dos Dados "):
+    st.dataframe(df.head(5))
+
+# ===============================
+# 2. Predição e Decodificação para Gráficos
+# ===============================
+with st.spinner('Aplicando o modelo e preparando visualizações...'):
+    df_processed = df.copy()
+
+    # 1. Seleção de Features para o Modelo
+    features = [
+        "price", "brand_encoded", "main_category_encoded", "sub_category_encoded",
+        "hour", "weekday_encoded", "add_to_cart_count", "views_count"
+    ]
+    # Validação se as colunas existem
+    if not all(col in df_processed.columns for col in features):
+        st.error(f":material/error: O CSV precisa conter todas as colunas necessárias: {', '.join(features)}")
+        st.stop()
+
+    X = df_processed[features]
+
+    # 2. Predição com o Modelo
+    y_probs = classification_model.predict_proba(X)[:, 1]
+    df_processed['prob_compra'] = y_probs
+    
+    threshold = 0.3
+    df_processed['predicao'] = (df_processed['prob_compra'] >= threshold).astype(int)
+    df_processed['classificacao'] = df_processed['predicao'].apply(lambda x: "Potencial Conversão" if x == 1 else "Baixo Potencial")
+
+    # 3. DECODIFICAÇÃO (inverse_transform): Criando colunas de texto para os gráficos
+    try:
+        df_processed['brand'] = assets['le_brand'].inverse_transform(df_processed['brand_encoded'])
+        df_processed['main_category'] = assets['le_main_category'].inverse_transform(df_processed['main_category_encoded'])
+        df_processed['weekday'] = assets['le_weekday'].inverse_transform(df_processed['weekday_encoded'])
+    except Exception as e:
+        st.error(f":material/error: Erro ao decodificar os dados para os gráficos: **{e}**")
+        st.warning("Isso pode acontecer se os códigos numéricos no seu CSV não corresponderem aos códigos usados no treinamento do modelo.")
+        st.stop()
+
+st.success(":material/check_circle: Predição concluída! Gráficos gerados com sucesso.")
 
 
-st.markdown('<h1 style="color:#1a73e8;">Modelo 2 - Classificação - Preços fora do Padrão</h1>', unsafe_allow_html=True)
+st.divider()
+st.subheader(":material/analytics: Análise de Conversão")
 
-with st.expander("Dados do Dataset"):
-    st.dataframe(df.head(4))
+df_conversao = df_processed[df_processed['classificacao'] == "Potencial Conversão"]
 
-# Sidebar para filtros
-st.sidebar.header(":material/search: Filtros de Análise")
 
-# Obter valores únicos para filtros
-categorias_disponiveis = ['Todas'] + sorted(df['main_category'].unique().tolist())
-marcas_disponiveis = ['Todas'] + sorted(df['brand'].unique().tolist())
+# --- INÍCIO DO CÓDIGO DOS GRÁFICOS
+st.markdown("**História de Negócio:** Como gerente de vendas, quero analisar os registros de sessões para classificá-las como possibilidade de conversão, permitindo focar esforços de marketing e vendas nos clientes mais promissores.")
 
-# Filtros
-categoria_selecionada = st.sidebar.selectbox(
-    "Selecione a Categoria:",
-    categorias_disponiveis
-)
+total_sessoes = len(df_processed)
+sessoes_potenciais = len(df_conversao)
+perc_potencial = (sessoes_potenciais / total_sessoes) * 100 if total_sessoes > 0 else 0
 
-marca_selecionada = st.sidebar.selectbox(
-    "Selecione a Marca:",
-    marcas_disponiveis
-)
-
-# Aplicar filtros
-df_filtrado = df.copy()
-
-if categoria_selecionada != 'Todas':
-    df_filtrado = df_filtrado[df_filtrado['main_category'] == categoria_selecionada]
-
-if marca_selecionada != 'Todas':
-    df_filtrado = df_filtrado[df_filtrado['brand'] == marca_selecionada]
-
-# Mostrar informações dos filtros aplicados
-if categoria_selecionada != 'Todas' or marca_selecionada != 'Todas':
-    st.info(f":material/bar_chart: Filtros aplicados: Categoria: {categoria_selecionada} | Marca: {marca_selecionada}")
-    st.info(f":material/trending_up: Total de produtos após filtros: {len(df_filtrado):,}")
-
-# Layout em colunas para o botão e estatísticas
-col1, col2, col3 = st.columns([2, 1, 1])
+col1, col2 = st.columns([1, 2])
+with col1:
+    st.metric("Total de Sessões Analisadas", formatar_inteiro(total_sessoes))
+    st.metric("Sessões com Potencial de Conversão", formatar_inteiro(sessoes_potenciais))
+    st.metric("Taxa de Potencial de Conversão", f"{perc_potencial:.2f}%")
 
 with col2:
-    if len(df_filtrado) == 0:
-        st.button(":material/refresh: Analisar Preços", type="primary", use_container_width=True, disabled=True)
-    else:
-        if st.button(":material/refresh: Analisar Preços", type="primary", use_container_width=True):
-            # Carregar o modelo
-            with open('logistic_regression_model.pkl', 'rb') as file:
-                model = pickle.load(file)
-            
-            # Selecionar apenas as colunas que o modelo foi treinado
-            df_model = df_filtrado[['price', 'price_ratio_cat']]
-            
-            # Aplicar o modelo aos dados filtrados
-            predictions = model.predict(df_model)
-            
-            # Adicionar predições ao DataFrame filtrado
-            df_resultado = df_filtrado.copy()
-            df_resultado['classificacao'] = predictions
-            df_resultado['status_preco'] = df_resultado['classificacao'].map({
-                0: 'Preço Normal',
-                1: 'Preço fora do Padrão'
-            })
-            
-            # Armazenar resultado no session_state
-            st.session_state.df_resultado = df_resultado
-            st.session_state.analise_feita = True
+    fig_pie = px.pie(
+        df_processed,
+        names='classificacao',
+        title='Distribuição das Sessões por Potencial de Conversão',
+        color='classificacao',
+        color_discrete_map={'Potencial Conversão': 'lightgreen', 'Baixo Potencial': 'lightcoral'}
+    )
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+st.markdown("#### :material/shopping_cart: Marcas e Categorias com Maior Potencial de Venda")
+st.markdown("**História de Negócio:** Como gerente de vendas, quero visualizar as marcas e categorias com a maior possibilidade de conversão para direcionar campanhas, otimizar estoques e negociar com fornecedores estratégicos.")
+
+col3, col4 = st.columns(2)
 
 with col3:
-    if st.button(":material/clear: Limpar Análise", type="secondary", use_container_width=True):
-        if 'df_resultado' in st.session_state:
-            del st.session_state.df_resultado
-        if 'analise_feita' in st.session_state:
-            del st.session_state.analise_feita
-        st.rerun()
-
-# Verificar se análise foi feita
-if 'analise_feita' in st.session_state and st.session_state.analise_feita:
-    df_resultado = st.session_state.df_resultado
-    
-    # Métricas principais
-    total_produtos = len(df_resultado)
-    produtos_fora_padrao = len(df_resultado[df_resultado['classificacao'] == 1])
-    percentual_fora_padrao = (produtos_fora_padrao / total_produtos * 100) if total_produtos > 0 else 0
-
-    # Exibir métricas
-    st.subheader(":material/insights: Métricas Gerais")
-    st.markdown("Estes são os resultados consolidados da análise de preços, com base nos filtros aplicados. As métricas fornecem uma visão rápida do impacto dos preços fora do padrão no nosso catálogo de produtos.")
-
-    
-    # Exibir métricas
-    met1, met2, met3, met4 = st.columns(4)
-    with met1:
-        st.metric("Total de Produtos", formatar_numero(total_produtos))
-    with met2:
-        st.metric("Produtos fora do Padrão", formatar_numero(produtos_fora_padrao))
-    with met3:
-        st.metric("% fora do Padrão", formatar_percentual(percentual_fora_padrao))
-    with met4:
-        preco_medio_fora = df_resultado[df_resultado['classificacao'] == 1]['price'].mean()
-        st.metric("Preço Médio (fora padrão)", formatar_moeda(preco_medio_fora))
-    
-    st.divider()
-    
-    # Análise por categoria - Gráfico de colunas
-    st.subheader(":material/bar_chart: Produtos fora do Padrão por Categoria")
-
-    st.markdown("**História de Negócio:** Como gerente de portfólio, preciso identificar rapidamente as categorias com maior incidência de preços fora do padrão. Este gráfico nos ajuda a visualizar onde as distorções de preço são mais críticas, permitindo focar nossos esforços de revisão e ajuste de forma mais eficaz para garantir a competitividade.")
-
-    
-    analise_categoria = df_resultado.groupby(['main_category', 'status_preco']).size().unstack(fill_value=0)
-    
-    if 'Preço fora do Padrão' in analise_categoria.columns:
-        analise_categoria_sorted = analise_categoria.sort_values('Preço fora do Padrão', ascending=False)
-        
-        fig_categoria = px.bar(
-            analise_categoria_sorted.reset_index(), 
-            x='main_category', 
-            y=['Preço Normal', 'Preço fora do Padrão'],
-            title="Distribuição de Preços por Categoria",
-            labels={'main_category': 'Categoria', 'value': 'Quantidade de Produtos'},
-            color_discrete_map={
-                'Preço Normal': '#2E8B57',
-                'Preço fora do Padrão': '#DC143C'
-            }
-        )
-        fig_categoria.update_layout(height=500, xaxis_tickangle=-45)
-        st.plotly_chart(fig_categoria, use_container_width=True)
-        
-        # Tabela de análise detalhada por categoria
-        st.subheader(":material/search: Análise Detalhada por Categoria")
-
-        st.markdown("**História de Negócio:** Como analista de pricing, meu objetivo é aprofundar a investigação sobre as variações de preço. Esta tabela detalha as estatísticas por categoria, permitindo comparar não apenas a quantidade de produtos fora do padrão, mas também o comportamento dos preços (médio, mediano) e sua dispersão. Isso é fundamental para entender a causa raiz das anomalias.")
-
-        analise_detalhada = df_resultado.groupby('main_category').agg({
-            'classificacao': ['count', 'sum'],
-            'price': ['mean', 'median', 'std']
-        }).round(2)
-        
-        # Renomear colunas
-        analise_detalhada.columns = ['Total Produtos', 'Produtos fora Padrão', 'Preço Médio', 'Preço Mediano', 'Desvio Padrão']
-        analise_detalhada['% fora Padrão'] = (analise_detalhada['Produtos fora Padrão'] / analise_detalhada['Total Produtos'] * 100).round(1)
-        analise_detalhada = analise_detalhada.sort_values('% fora Padrão', ascending=False)
-        
-        st.dataframe(analise_detalhada, use_container_width=True)
-    
-    # Análise por marca (se não filtrada)
-    if marca_selecionada == 'Todas':
-        st.subheader(":material/label: Produtos fora do Padrão por Marca")
-        
-        st.markdown("**História de Negócio:** Como gerente comercial, é crucial monitorar o posicionamento de preço das nossas marcas parceiras. Este gráfico destaca as marcas que mais apresentam produtos com preços fora do padrão, fornecendo insights valiosos para iniciar conversas estratégicas com fornecedores sobre alinhamento de preços e políticas comerciais.")
-
-        
-        analise_marca = df_resultado.groupby(['brand', 'status_preco']).size().unstack(fill_value=0)
-        
-        if 'Preço fora do Padrão' in analise_marca.columns:
-            # Pegar apenas as top 10 marcas com mais produtos fora do padrão
-            top_marcas = analise_marca.sort_values('Preço fora do Padrão', ascending=False).head(10)
-            
-            fig_marca = px.bar(
-                top_marcas.reset_index(), 
-                x='brand', 
-                y=['Preço Normal', 'Preço fora do Padrão'],
-                title="Top 10 Marcas - Distribuição de Preços",
-                labels={'brand': 'Marca', 'value': 'Quantidade de Produtos'},
-                color_discrete_map={
-                    'Preço Normal': '#2E8B57',
-                    'Preço fora do Padrão': '#DC143C'
-                }
-            )
-            fig_marca.update_layout(height=500, xaxis_tickangle=-45)
-            st.plotly_chart(fig_marca, use_container_width=True)
-    
-    # Gráfico de pizza original (distribuição geral)
-    st.subheader(":material/trending_up: Distribuição Geral dos Preços")
-
-    st.markdown("**História de Negócio:** Como diretor de pricing, necessito de uma visão macro sobre a saúde da nossa estratégia de precificação. Este gráfico de pizza oferece um panorama claro da proporção de produtos com preços adequados versus aqueles que estão fora do padrão, servindo como um termômetro para avaliar o risco geral e a consistência do nosso portfólio.")
-
-    counts = df_resultado['status_preco'].value_counts()
-    
-    fig_pizza = px.pie(
-        values=counts.values, 
-        names=counts.index, 
-        title="Distribuição da Classificação de Preços",
-        color_discrete_map={
-            'Preço Normal': '#2E8B57',
-            'Preço fora do Padrão': '#DC143C'
-        }
+    top_marcas = df_conversao['brand'].value_counts().nlargest(10).reset_index()
+    fig_marcas = px.bar(
+        top_marcas,
+        x='count',
+        y='brand',
+        orientation='h',
+        title='Top 10 Marcas em Sessões de Potencial Conversão',
+        labels={'count': 'Nº de Sessões', 'brand': 'Marca'},
+        text='count'
     )
-    st.plotly_chart(fig_pizza, use_container_width=True)
-    
-    # Download dos dados analisados
-    st.subheader(":material/download: Download dos Resultados")
+    fig_marcas.update_layout(yaxis={'categoryorder':'total ascending'})
+    st.plotly_chart(fig_marcas, use_container_width=True)
 
-    st.markdown("**História de Negócio:** Como analista de dados, preciso disponibilizar os resultados da classificação para que outras equipes possam utilizá-los em suas próprias ferramentas e análises. A exportação dos dados permite integrar esses insights em outros relatórios, compartilhar com áreas de negócio e realizar investigações mais profundas offline.")
-
-    csv = df_resultado.to_csv(index=False)
-    st.download_button(
-        label=":material/file_download: Baixar Dados Analisados (CSV)",
-        data=csv,
-        file_name=f"analise_precos_{categoria_selecionada}_{marca_selecionada}.csv",
-        mime="text/csv"
+with col4:
+    top_categorias = df_conversao['main_category'].value_counts().nlargest(10).reset_index()
+    fig_categorias = px.bar(
+        top_categorias,
+        x='count',
+        y='main_category',
+        orientation='h',
+        title='Top 10 Categorias em Sessões de Potencial Conversão',
+        labels={'count': 'Nº de Sessões', 'main_category': 'Categoria'},
+        text='count'
     )
+    fig_categorias.update_layout(yaxis={'categoryorder':'total ascending'})
+    st.plotly_chart(fig_categorias, use_container_width=True)
 
-else:
-    # Mostrar informações iniciais
-    st.info(":material/touch_app: Clique em 'Analisar Preços' para gerar a análise dos produtos fora do padrão.")
-    
-    # Estatísticas básicas do dataset
-    st.subheader(":material/info: Informações do Dataset")
-    col_info1, col_info2, col_info3 = st.columns(3)
-    
-    with col_info1:
-        st.metric("Total de Produtos", formatar_numero(len(df_filtrado)))
-    with col_info2:
-        st.metric("Categorias", formatar_numero(len(df_filtrado['main_category'].unique())))
-    with col_info3:
-        st.metric("Marcas", formatar_numero(len(df_filtrado['brand'].unique())))
+st.markdown("#### :material/calendar_today: Dias da Semana Mais Propensos à Conversão")
+st.markdown("**História de Negócio:** Como gerente de vendas, quero saber quais dias da semana são mais propensos a resultar em uma compra para otimizar o agendamento de campanhas de marketing, promoções e a escala da equipe de atendimento.")
 
+dias_conversao = df_conversao['weekday'].value_counts().reset_index()
+ordem_dias = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+dias_conversao['weekday'] = pd.Categorical(dias_conversao['weekday'], categories=ordem_dias, ordered=True)
+dias_conversao = dias_conversao.sort_values('weekday')
 
+fig_dias = px.bar(
+    dias_conversao,
+    x='weekday',
+    y='count',
+    title='Sessões com Potencial de Conversão por Dia da Semana',
+    labels={'count': 'Nº de Sessões', 'weekday': 'Dia da Semana'},
+    text='count'
+)
+st.plotly_chart(fig_dias, use_container_width=True)
+
+st.divider()
+st.subheader(":material/download: Download dos Resultados")
+csv = df_processed.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label=":material/save: Baixar Dados com Predições (CSV)",
+    data=csv,
+    file_name="purchase_predictions_resultados.csv",
+    mime="text/csv"
+)

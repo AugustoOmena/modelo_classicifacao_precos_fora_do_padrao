@@ -35,6 +35,9 @@ def formatar_numero(valor, decimais=0):
     else:
         return f"{valor:,.{decimais}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def formatar_inteiro(n):
+    return f"{n:,.0f}".replace(",", ".")
+
 def formatar_percentual(valor):
     """
     Formata percentual brasileiro (12,34%)

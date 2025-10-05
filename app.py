@@ -1,67 +1,48 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="Análise de Preços",
+    page_title="Tech Challenge 03 - ML Analytics",
     page_icon=":material/analytics:",
     layout="wide"
 )
 
-st.markdown('<h1 style="color:#1a73e8;">Sistema de Análise de Preços</h1>', unsafe_allow_html=True)
+st.markdown('<h1 style="color:#1a73e8;">Tech Challenge 03 - Machine Learning Analytics</h1>', unsafe_allow_html=True)
 
 st.markdown("""
-## Sobre o Projeto
+## :material/target: Bem-vindo ao Sistema de Análise Preditiva
 
-Este projeto foi desenvolvido para identificar **produtos com preços fora do padrão** utilizando técnicas de Machine Learning. 
-O sistema oferece diferentes modelos analíticos para apoiar decisões de pricing e estratégias comerciais.
+Este sistema utiliza **Machine Learning** para análise de dados de e-commerce, oferecendo insights valiosos 
+para decisões estratégicas de negócio.
 
-### :material/target: Modelos Disponíveis
+### :material/psychology: Modelos Disponíveis
 
-**:material/trending_up: Modelo 1 - Classificação**
-- Identifica produtos com preços anômalos
-- Análise por categoria e marca
-- Visualizações interativas
-- Métricas de performance
-- Export de resultados
-
-**:material/donut_small: Modelo 2 - Clusterização**  
-- Segmentação de clientes
-- Análise de comportamento de consumo
+**:material/groups: Modelo 1 - Análise de Clientes**
+- Clusterização de clientes por comportamento
+- Segmentação automática de perfis
+- Análise de padrões de consumo
 - Identificação de grupos similares
 
-### :material/lightbulb: Como Funciona
+**:material/shopping_cart: Modelo 2 - Previsão de Probabilidade de Compra**
+- Predição de conversão de vendas
+- Análise de sessões de clientes
+- Insights por marca, categoria e período
+- Dashboard com métricas de conversão
 
-O sistema utiliza algoritmos de **Regressão Logística** treinados com dados históricos de preços, 
-categorizando produtos como "Preço Normal" ou "Preço fora do Padrão" com base em:
+**:material/price_check: Modelo 3 - Preços fora do Padrão (Bônus)**
+- Classificação de produtos com preços anômalos
+- Análise por categoria e marca
+- Identificação automática de outliers
+- Visualizações interativas de pricing
 
-- Preço do produto
-- Razão de preço por categoria
-- Categoria principal
-- Marca
+### :material/rocket_launch: Como Começar
 
-### :material/checklist: Como Usar
-
-1. **Navegue** pelo menu lateral para escolher o modelo
-2. **Faça upload** do seu CSV ou use os dados de exemplo
-3. **Configure filtros** por categoria ou marca
-4. **Execute a análise** e visualize os resultados
-5. **Exporte** os dados analisados
+1. :material/menu: **Navegue** pelo menu lateral
+2. :material/upload: **Carregue** seus dados ou use os exemplos
+3. :material/play_arrow: **Execute** a análise desejada
+4. :material/insights: **Explore** os resultados e insights
+5. :material/download: **Exporte** os dados processados
 
 ---
-**:material/lightbulb: Selecione um modelo no menu lateral para começar a análise!**
-""")
 
-# Informações técnicas
-with st.expander(":material/info: Informações Técnicas"):
-    st.markdown("""
-    **Tecnologias Utilizadas:**
-    - Python 3.11
-    - Streamlit (Interface)
-    - Pandas (Manipulação de dados)
-    - Plotly (Visualizações)
-    - Scikit-learn (Machine Learning)
-    
-    **Requisitos dos Dados:**
-    - Formato: CSV
-    - Colunas obrigatórias: `price`, `price_ratio_cat`, `main_category`, `brand`
-    - Encoding: UTF-8
-    """)
+:material/arrow_forward: **Selecione um modelo no menu lateral para iniciar sua análise!**
+""")
